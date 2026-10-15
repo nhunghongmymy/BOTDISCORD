@@ -40,6 +40,8 @@ module.exports = {
 
             // Nếu bị lỗi (khác lỗi chưa có dữ liệu) thì báo ra console
             if (error && error.code !== 'PGRST116') {
+                console.log("🔎 [DEBUG EVENT ROLE] URL đang kết nối:", supabase.supabaseUrl);
+                console.log("🔑 [DEBUG EVENT ROLE] 5 ký tự cuối của Key:", supabase.supabaseKey ? supabase.supabaseKey.slice(-5) : "Không có key");
                 console.error('Hệ thống máy tính tiền bị kẹt bill (Event Role):', error.message);
                 return;
             }
