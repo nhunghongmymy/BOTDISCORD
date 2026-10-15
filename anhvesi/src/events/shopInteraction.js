@@ -3,7 +3,7 @@ const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, String
 const { createClient } = require('@supabase/supabase-js');
 const { isAuthorized } = require('../utils/permissions');
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL_ANHVESI, process.env.SUPABASE_KEY_ANHVESI);
 
 const FOOD_MENU = [
     { id: '1', name: 'Cà Phê Đen Đá', emoji: '☕' },

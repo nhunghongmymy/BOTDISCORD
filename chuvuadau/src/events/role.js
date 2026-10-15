@@ -2,7 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 // Khởi tạo Supabase ngay trong file event để hoạt động độc lập
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL_CHUVUADAU, process.env.SUPABASE_KEY_CHUVUADAU);
 
 module.exports = {
     name: 'messageCreate',

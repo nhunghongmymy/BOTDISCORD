@@ -3,7 +3,7 @@ const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, String
 const { createClient } = require('@supabase/supabase-js');
 const { isAuthorized } = require('../utils/permissions');
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(process.env.SUPABASE_URL_BAOKEQUANNHAU, process.env.SUPABASE_KEY_BAOKEQUANNHAU);
 
 // ĐỒNG BỘ THỰC ĐƠN MỒI NHẬU & BIA RƯỢU TỪ FILE RUNHAU.JS
 const FOOD_MENU = [
