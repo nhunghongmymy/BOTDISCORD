@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Options } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,7 +14,15 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent
-    ]
+    ],
+    // Ép bot dọn rác liên tục để giải phóng RAM
+    makeCache: Options.cacheWithLimits({
+        ...Options.DefaultMakeCacheSettings,
+        MessageManager: 10,  // Chỉ nhớ tối đa 10 tin nhắn
+        PresenceManager: 0,  // Không lưu trạng thái online
+        ThreadManager: 0,    // Không lưu cache của luồng
+        GuildMemberManager: 10, // Chỉ lưu cache 10 member
+    }),
 });
 
 client.commands = new Collection();
@@ -174,3 +182,18 @@ client.on('messageCreate', async message => {
 });
 
 client.login(process.env.DISCORD_TOKEN_BAOKEQUANNHAU);
+
+// ==========================================
+// MÃ CHỐNG SẬP DÂY CHUYỀN (ANTI-CRASH)
+// ==========================================
+process.on('unhandledRejection', (reason, p) => {
+    console.log('🛑 [ANTI-CRASH Bảo Kê] Lỗi Promise:', reason);
+});
+
+process.on('uncaughtException', (err, origin) => {
+    console.log('🛑 [ANTI-CRASH Bảo Kê] Lỗi hệ thống:', err);
+});
+
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+    console.log('🛑 [ANTI-CRASH Bảo Kê] Lỗi ngoại lệ:', err);
+});
