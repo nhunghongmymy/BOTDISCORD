@@ -25,9 +25,6 @@ module.exports = {
         if (!data || Number(data.dau) < betAmount) {
             return message.reply('Bạn không có đủ Dâu để cược mức này. Điểm danh hoặc ra vỉa hè ăn xin thêm đi!');
         }
-
-        const winEmoji = '<:mongcnhin:1554156776910356500>';
-        const loseEmoji = '<:mocry:1554157034767777872>';
         
         // Gửi tin nhắn trạng thái chờ, không hiển thị emoji nhấp nháy
         const gambleMsg = await message.reply('🎲 Nhà cái đang xóc đĩa...');
@@ -46,12 +43,12 @@ module.exports = {
             currentDau += betAmount;
             embedColor = '#57F287';
             title = '🎉 Thắng cược!';
-            desc = `Tuyệt vời! Nhà cái khóc thét, bạn hốt được **${betAmount.toLocaleString('en-US')}** <a:Strawberry:1536056987668713558>${winEmoji}`;
+            desc = `Tuyệt vời! Nhà cái khóc thét, bạn hốt được **${betAmount.toLocaleString('en-US')}** <a:Strawberry:1536056987668713558>!!!`;
         } else {
             currentDau -= betAmount;
             embedColor = '#ED4245';
             title = '💸 Thua trắng!';
-            desc = `Đen thôi đỏ quên đi! Bạn đã cúng cho nhà cái **${betAmount.toLocaleString('en-US')}** <a:Strawberry:1536056987668713558>${loseEmoji}`;
+            desc = `Đen thôi đỏ quên đi! Bạn đã cúng cho nhà cái **${betAmount.toLocaleString('en-US')}** <a:Strawberry:1536056987668713558>. Cố gắng lên, lần sau sẽ may mắn hơn!`;
         }
 
         // Cập nhật số tiền và lưu toàn bộ data (để không đè mất các cột dữ liệu khác như kimbai_expire_time)
