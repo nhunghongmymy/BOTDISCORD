@@ -66,6 +66,8 @@ client.once('clientReady', () => {
 // 3. XỬ LÝ LỆNH VÀ CỘNG NẮP BIA TỪ TIN NHẮN
 // ==========================================
 client.on('messageCreate', async message => {
+    // THÊM ĐÚNG DÒNG NÀY ĐỂ BẮT MẠCH:
+    console.log(`[TEST] Đã nghe thấy tin nhắn: "${message.content}" từ ${message.author.tag}`);
     // Chặn tin nhắn từ bot và tin nhắn riêng (DM) để tránh lỗi hệ thống
     if (message.author.bot || !message.guild) return;
 
