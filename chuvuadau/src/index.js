@@ -164,7 +164,7 @@ client.on('messageCreate', async message => {
             for (let pet of qPets) {
                 // Nếu lệnh user vừa gõ trùng với Quest và Quest chưa làm
                 if (pet.daily_quest === (PREFIX + commandName) && !pet.quest_status) {
-                    const reward = Math.floor(Math.random() * (50000 - 10000 + 1)) + 10000;
+                    const reward = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000;
                     let { data: eco } = await supabase.from('economy').select('*').eq('user_id', userId).single();
                     if (eco) {
                         eco.dau = Number(eco.dau) + reward;
