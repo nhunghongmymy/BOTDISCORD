@@ -1,33 +1,25 @@
-require('dotenv').config();
-
 const express = require('express');
 const app = express();
+const port = process.env.PORT || 10000;
 
-app.get('/', (_req, res) => {
-  res.status(200).send('Các bot đang hoạt động');
-});
+// 1. BẬT WEB SERVER CHỐNG SLEEP
+app.get('/', (req, res) => res.send('Hệ thống Bot đang hoạt động!'));
+app.listen(port, () => console.log(`Web server đang chạy trên port ${port}`));
 
-const port = process.env.PORT || 3000;
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Web server đang chạy trên port ${port}`);
-});
+// 2. GỌI 3 BOT THỨC DẬY (XẾP HÀNG ĐỂ TRÁNH QUÁ TẢI CPU)
+console.log("Bắt đầu khởi động hệ thống đa Bot...");
 
-// Mỗi file khởi tạo và đăng nhập một Discord client
-require('./anhvesi/src/index.js');
-require('./baokequannhau/src/index.js');;
-require('./chuvuadau/src/index.js')
+setTimeout(() => {
+    console.log("Đang mở cửa cho Anh Vệ Sĩ...");
+    require('./anhvesi/src/index.js'); 
+}, 1000);
 
-// ==========================================
-// MÃ CHỐNG SẬP DÂY CHUYỀN (ANTI-CRASH)
-// ==========================================
-process.on('unhandledRejection', (reason, p) => {
-    console.log('🛑 [ANTI-CRASH] Lỗi Promise không được xử lý:', reason);
-});
+setTimeout(() => {
+    console.log("Đang mở cửa cho Bảo Kê Quán Nhậu...");
+    require('./baokequannhau/src/index.js'); 
+}, 8000);
 
-process.on('uncaughtException', (err, origin) => {
-    console.log('🛑 [ANTI-CRASH] Lỗi hệ thống nghiêm trọng:', err);
-});
-
-process.on('uncaughtExceptionMonitor', (err, origin) => {
-    console.log('🛑 [ANTI-CRASH] Lỗi ngoại lệ:', err);
-});
+setTimeout(() => {
+    console.log("Đang mở cửa cho Chú Vừa Đâu...");
+    require('./chuvuadau/src/index.js'); 
+}, 15000);
