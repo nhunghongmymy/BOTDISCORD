@@ -15,6 +15,15 @@ const QUEST_LIST = [
     { cmd: 'mdomin', desc: 'chủ nhân đi đào mìn (`mdomin`) để thử cảm giác mạnh' }
 ];
 
+// Hàm kiểm tra 2 mốc thời gian có cùng thuộc một ngày (theo giờ Việt Nam UTC+7) không
+const checkIsSameDayVN = (time1, time2) => {
+    const d1 = new Date(Number(time1) + 7 * 3600 * 1000);
+    const d2 = new Date(Number(time2) + 7 * 3600 * 1000);
+    return d1.getUTCFullYear() === d2.getUTCFullYear() && 
+           d1.getUTCMonth() === d2.getUTCMonth() && 
+           d1.getUTCDate() === d2.getUTCDate();
+};
+
 module.exports = {
     name: 'care',
     description: 'Chăm sóc, cho ăn và tương tác với thú cưng',
@@ -111,6 +120,14 @@ module.exports = {
                 }
 
                 if (action === 'btnFeed') {
+                    // Kiểm tra giới hạn 3 bữa/ngày ngay trước khi mở menu Siêu Thị
+                    const isSameDay = checkIsSameDayVN(now, petData.last_fed || 0);
+                    const currentFeedCount = isSameDay ? (petData.feed_count || 0) : 0;
+
+                    if (currentFeedCount >= 3) {
+                        return i.reply({ content: '❌ Char đã no căng bụng (**3/3 bữa** hôm nay) rồi! Hãy quay lại cho ăn vào ngày mai nhé.', ephemeral: true });
+                    }
+
                     const foodOptions = FOOD_MENU.map(f => new StringSelectMenuOptionBuilder().setLabel(`${f.name} (${f.price} Dâu)`).setValue(`feed_${currentPetId}_${f.id}`).setEmoji(f.emoji));
                     const feedMenu = new StringSelectMenuBuilder().setCustomId('menu_feed_pet').setPlaceholder('Chọn món ăn từ Siêu Thị...').addOptions(foodOptions);
                     
@@ -130,6 +147,14 @@ module.exports = {
 
                 let { data: petData } = await supabase.from('user_pets').select('*, pets(*)').eq('id', currentPetId).single();
                 let { data: economyData } = await supabase.from('economy').select('*').eq('user_id', userId).single();
+
+                // Kiểm tra lại lần nữa chặn lỗi nhấp menu liên tục
+                const isSameDay = checkIsSameDayVN(now, petData.last_fed || 0);
+                const currentFeedCount = isSameDay ? (petData.feed_count || 0) : 0;
+
+                if (currentFeedCount >= 3) {
+                    return i.reply({ content: '❌ Char đã no căng bụng (**3/3 bữa** hôm nay) rồi! Hãy quay lại cho ăn vào ngày mai nhé.', ephemeral: true });
+                }
 
                 if (Number(economyData.dau) < food.price) {
                     return i.reply({ content: '❌ Bạn không có đủ tiền mua món này!', ephemeral: true });
@@ -160,10 +185,12 @@ module.exports = {
                 economyData.dau = Math.max(0, Number(economyData.dau) + dauChange);
                 await supabase.from('economy').upsert(economyData);
 
+                // Cập nhật Database, tăng số lần đã ăn hôm nay
                 await supabase.from('user_pets').update({
                     hunger: petData.hunger,
                     happiness: petData.happiness,
-                    last_fed: now
+                    last_fed: now,
+                    feed_count: currentFeedCount + 1
                 }).eq('id', currentPetId);
 
                 await renderPetDashboard(i, currentPetId);
@@ -191,14 +218,18 @@ module.exports = {
                 harvestStatus = (p.hunger < 50 || p.happiness < 50) ? '😠 Đang đình công (Đói/Buồn)' : '💰 Đã sẵn sàng thu hoạch!';
             }
 
-            // Xử lý kiểm tra thời gian thực để cập nhật nút hiển thị nhiệm vụ
+            // Tính số bữa ăn hôm nay để hiển thị
+            const isSameDay = checkIsSameDayVN(currentTime, p.last_fed || 0);
+            const displayFeedCount = isSameDay ? (p.feed_count || 0) : 0;
+            const feedStatusText = displayFeedCount >= 3 ? 'Đã no căng (3/3 bữa)' : `Đã ăn ${displayFeedCount}/3 bữa`;
+
             const isNewQuestAvailable = !p.daily_quest || (currentTime - Number(p.last_quest_reset) > 24 * 60 * 60 * 1000);
             const showQuestDone = p.quest_status && !isNewQuestAvailable;
 
             const embed = new EmbedBuilder()
                 .setColor('#ff99af')
                 .setTitle(`Bảng Điều Khiển: ${p.pets.name}`)
-                .setDescription(`**Chỉ số sinh tồn:**\n🍗 Độ no: ${hBar} **${p.hunger}%**\n💖 Vui vẻ: ${hapBar} **${p.happiness}%**\n\n**Tình trạng Dâu:** ${harvestStatus}`)
+                .setDescription(`**Chỉ số sinh tồn:**\n🍗 Độ no: ${hBar} **${p.hunger}%**\n💖 Vui vẻ: ${hapBar} **${p.happiness}%**\n🍲 Hôm nay: **${feedStatusText}**\n\n**Tình trạng Dâu:** ${harvestStatus}`)
                 .setImage(p.pets.image_url)
                 .setFooter({ text: 'Lưu ý: Nếu bỏ đói quá 3 ngày, Char sẽ bỏ đi và cuỗm mất 50k Dâu!' });
 

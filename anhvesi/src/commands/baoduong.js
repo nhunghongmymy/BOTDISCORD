@@ -20,6 +20,15 @@ const QUEST_LIST = [
     { cmd: 'mthamdo', desc: 'Stylist bước đi trên thảm đỏ dò mìn (`mthamdo`)' }
 ];
 
+// Hàm kiểm tra 2 mốc thời gian có cùng thuộc một ngày (theo giờ Việt Nam UTC+7) không
+const checkIsSameDayVN = (time1, time2) => {
+    const d1 = new Date(Number(time1) + 7 * 3600 * 1000);
+    const d2 = new Date(Number(time2) + 7 * 3600 * 1000);
+    return d1.getUTCFullYear() === d2.getUTCFullYear() && 
+           d1.getUTCMonth() === d2.getUTCMonth() && 
+           d1.getUTCDate() === d2.getUTCDate();
+};
+
 module.exports = {
     name: 'baoduong',
     description: 'Bảo dưỡng, làm đẹp và tương tác với các búp bê trong bộ sưu tập',
@@ -29,7 +38,6 @@ module.exports = {
         const TWELVE_HOURS = 12 * 60 * 60 * 1000;
         const ONE_DAY = 24 * 60 * 60 * 1000;
 
-        // ĐÃ BỎ: guild_id (Bot chạy độc lập)
         const { data: myPetsChecked } = await supabase
             .from('user_pets')
             .select('*, pets(name, image_url, likes, hates)')
@@ -51,19 +59,16 @@ module.exports = {
             let currentPetId;
             const currentTime = Date.now();
             
-            // XỬ LÝ: Menu chọn Nhân vật gốc
             if (i.isStringSelectMenu() && i.customId === 'select_pet_to_care') {
                 currentPetId = parseInt(i.values[0]);
                 await renderPetDashboard(i, currentPetId);
             }
 
-            // XỬ LÝ: Nút Quay Lại từ Menu Tương Tác
             if (i.isButton() && i.customId.startsWith('btnBack_')) {
                 currentPetId = parseInt(i.customId.split('_')[1]);
                 await renderPetDashboard(i, currentPetId);
             }
 
-            // XỬ LÝ: Các nút chức năng chính
             if (i.isButton() && (i.customId.startsWith('btnHarvest_') || i.customId.startsWith('btnQuest_') || i.customId.startsWith('btnFeed_'))) {
                 const action = i.customId.split('_')[0]; 
                 currentPetId = parseInt(i.customId.split('_')[1]);
@@ -71,7 +76,6 @@ module.exports = {
                 let { data: petData } = await supabase.from('user_pets').select('*, pets(*)').eq('id', currentPetId).single();
                 let { data: economyData } = await supabase.from('economy').select('*').eq('user_id', userId).single();
 
-                // 1. NHẬN CÁT-XÊ (HARVEST)
                 if (action === 'btnHarvest') {
                     if (currentTime - Number(petData.last_harvest) < TWELVE_HOURS && Number(petData.last_harvest) !== 0) {
                         return i.reply({ content: '⏳ Nhân vật đang bận rộn lịch trình! Hãy quay lại sau 12 tiếng.', ephemeral: true });
@@ -93,16 +97,14 @@ module.exports = {
                         happiness: petData.happiness
                     }).eq('id', currentPetId);
 
-                    await renderPetDashboard(i, currentPetId); // Cập nhật Dashboard
-                    await i.followUp({ content: `💎 Cát-xê công việc: Bạn đã thu về **20.000** <a:gemheartpalepink:1551126619546976267> từ ${petData.pets.name}!`, ephemeral: true }); // Nhắn ẩn
+                    await renderPetDashboard(i, currentPetId);
+                    await i.followUp({ content: `💎 Cát-xê công việc: Bạn đã thu về **20.000** <a:gemheartpalepink:1551126619546976267> từ ${petData.pets.name}!`, ephemeral: true }); 
                 }
 
-                // 2. YÊU CẦU / NHIỆM VỤ (QUEST)
                 if (action === 'btnQuest') {
                     let lastReset = parseInt(petData.last_quest_reset) || 0;
                     let timeSinceReset = currentTime - lastReset;
 
-                    // KIỂM TRA LOGIC 24H
                     if (!petData.daily_quest || timeSinceReset >= ONE_DAY) {
                         const randomQuest = QUEST_LIST[Math.floor(Math.random() * QUEST_LIST.length)];
                         petData.daily_quest = randomQuest.cmd;
@@ -116,7 +118,6 @@ module.exports = {
                         await renderPetDashboard(i, currentPetId);
                         await i.followUp({ content: `📜 **Yêu Cầu Mới Từ Nhân Vật:**\n${petData.pets.name} muốn ${randomQuest.desc}!\n*(Hãy ra ngoài chat gõ lệnh \`${randomQuest.cmd}\` để hoàn thành nhé)*`, ephemeral: true });
                     } else {
-                        // CHƯA QUA 24H -> HIỆN THÔNG BÁO TÙY TIẾN ĐỘ
                         if (!petData.quest_status) {
                             const q = QUEST_LIST.find(q => q.cmd === petData.daily_quest);
                             return i.reply({ content: `📜 **Nhiệm vụ chưa xong:**\n${petData.pets.name} đang đợi ${q ? q.desc : 'bạn làm nhiệm vụ'}!\n*(Bạn hãy gõ lệnh \`${petData.daily_quest}\` ở bên ngoài kênh chat để nhận thưởng nhé)*`, ephemeral: true });
@@ -129,8 +130,15 @@ module.exports = {
                     }
                 }
 
-                // 3. MỞ MENU ĂN UỐNG
                 if (action === 'btnFeed') {
+                    // Kiểm tra giới hạn 3 bữa/ngày ngay trước khi mở menu Ăn Uống
+                    const isSameDay = checkIsSameDayVN(currentTime, petData.last_fed || 0);
+                    const currentFeedCount = isSameDay ? (petData.feed_count || 0) : 0;
+
+                    if (currentFeedCount >= 3) {
+                        return i.reply({ content: '❌ Nhân vật đã no bụng (**3/3 bữa** hôm nay) rồi! Không thể nhét thêm nữa đâu, hãy quay lại vào ngày mai nhé.', ephemeral: true });
+                    }
+
                     const foodOptions = FOOD_MENU.map(f => new StringSelectMenuOptionBuilder().setLabel(`${f.name} (${f.price} Tinh Thể)`).setValue(`feed_${currentPetId}_${f.id}`).setEmoji(f.emoji));
                     const feedMenu = new StringSelectMenuBuilder().setCustomId('menu_feed_pet').setPlaceholder('Chọn món ăn / thức uống...').addOptions(foodOptions);
                     
@@ -143,7 +151,6 @@ module.exports = {
                 }
             }
 
-            // XỬ LÝ: Khi người dùng chọn món ăn từ Menu
             if (i.isStringSelectMenu() && i.customId === 'menu_feed_pet') {
                 const [_, petIdStr, foodId] = i.values[0].split('_');
                 currentPetId = parseInt(petIdStr);
@@ -151,6 +158,14 @@ module.exports = {
 
                 let { data: petData } = await supabase.from('user_pets').select('*, pets(*)').eq('id', currentPetId).single();
                 let { data: economyData } = await supabase.from('economy').select('*').eq('user_id', userId).single();
+
+                // Kiểm tra lại chặn click liên tục
+                const isSameDay = checkIsSameDayVN(currentTime, petData.last_fed || 0);
+                const currentFeedCount = isSameDay ? (petData.feed_count || 0) : 0;
+
+                if (currentFeedCount >= 3) {
+                    return i.reply({ content: '❌ Nhân vật đã no bụng (**3/3 bữa** hôm nay) rồi! Không thể nhét thêm nữa đâu, hãy quay lại vào ngày mai nhé.', ephemeral: true });
+                }
 
                 if (Number(economyData.dau) < food.price) {
                     return i.reply({ content: '❌ Bạn không có đủ Tinh Thể để thanh toán món này!', ephemeral: true });
@@ -181,25 +196,24 @@ module.exports = {
                 economyData.dau = Math.max(0, Number(economyData.dau) + dauChange);
                 await supabase.from('economy').upsert(economyData);
 
+                // Cập nhật Database, tăng số bữa đã ăn
                 await supabase.from('user_pets').update({
                     hunger: petData.hunger,
                     happiness: petData.happiness,
-                    last_fed: currentTime
+                    last_fed: currentTime,
+                    feed_count: currentFeedCount + 1
                 }).eq('id', currentPetId);
 
-                await renderPetDashboard(i, currentPetId); // Cập nhật lại giao diện Dashboard bị khuất
-                await i.followUp({ content: msgReply, ephemeral: true }); // Hiện tin nhắn báo kết quả ăn uống
+                await renderPetDashboard(i, currentPetId); 
+                await i.followUp({ content: msgReply, ephemeral: true }); 
             }
         });
 
-        // HÀM: Đẩy giao diện hiển thị
         async function renderPetDashboard(interaction, petId) {
             const payload = await getDashboardPayload(petId);
-            // Cập nhật đè trực tiếp lên tương tác cũ, giúp không bao giờ bị lỗi "Không phản hồi"
             await interaction.update(payload);
         }
 
-        // HÀM: Chế tạo Giao diện (Embed)
         async function getDashboardPayload(petId) {
             const currentTime = Date.now();
             const { data: p } = await supabase.from('user_pets').select('*, pets(*)').eq('id', petId).single();
@@ -217,7 +231,11 @@ module.exports = {
                 harvestStatus = (safeHunger < 50 || safeHappiness < 50) ? '😠 Từ chối làm việc (Đói bụng/Tâm trạng kém)' : '💎 Đã sẵn sàng nhận lịch trình mới!';
             }
 
-            // LOGIC KIỂM TRA NÚT YÊU CẦU
+            // Tính số bữa ăn hôm nay để hiển thị
+            const isSameDay = checkIsSameDayVN(currentTime, p.last_fed || 0);
+            const displayFeedCount = isSameDay ? (p.feed_count || 0) : 0;
+            const feedStatusText = displayFeedCount >= 3 ? 'Đã no căng (3/3 bữa)' : `Đã ăn ${displayFeedCount}/3 bữa`;
+
             let lastReset = parseInt(p.last_quest_reset) || 0;
             let timeSinceReset = currentTime - lastReset;
             let canDoNewQuest = (!p.daily_quest || timeSinceReset >= (24 * 60 * 60 * 1000));
@@ -227,7 +245,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor('#FF69B4')
                 .setTitle(`Góc Tương Tác: ${p.pets.name}`)
-                .setDescription(`**Chỉ số nhân vật:**\n🍖 Độ no: ${hBar} **${safeHunger}%**\n💖 Vui vẻ: ${hapBar} **${safeHappiness}%**\n\n**Tình trạng công việc:** ${harvestStatus}`)
+                .setDescription(`**Chỉ số nhân vật:**\n🍖 Độ no: ${hBar} **${safeHunger}%**\n💖 Vui vẻ: ${hapBar} **${safeHappiness}%**\n🍽️ Hôm nay: **${feedStatusText}**\n\n**Tình trạng công việc:** ${harvestStatus}`)
                 .setImage(p.pets.image_url)
                 .setFooter({ text: 'Lưu ý: Nếu để quá 3 ngày không tương tác, nhân vật sẽ rời đi và mang theo 50k Tinh Thể!' });
 

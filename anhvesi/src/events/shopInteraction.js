@@ -39,7 +39,6 @@ module.exports = {
             }
 
             if (interaction.customId === 'btn_pet_edit') {
-                // Đã thêm .order('id', { ascending: true })
                 const { data: pets } = await supabase.from('pets').select('*').eq('guild_id', interaction.guild.id).order('id', { ascending: true });
                 if (!pets || pets.length === 0) return interaction.reply({ content: 'Chưa có nhân vật nào để sửa!', ephemeral: true });
                 const menu = new StringSelectMenuBuilder()
@@ -51,7 +50,6 @@ module.exports = {
             }
 
             if (interaction.customId === 'btn_pet_del') {
-                // Đã thêm .order('id', { ascending: true })
                 const { data: pets } = await supabase.from('pets').select('*').eq('guild_id', interaction.guild.id).order('id', { ascending: true });
                 if (!pets || pets.length === 0) return interaction.reply({ content: 'Chưa có nhân vật nào để xóa!', ephemeral: true });
                 const menu = new StringSelectMenuBuilder()
@@ -69,7 +67,6 @@ module.exports = {
             }
 
             if (interaction.customId === 'btn_shop_edit') {
-                // Đã thêm .order('id', { ascending: true })
                 const { data: chars } = await supabase.from('characters').select('*').eq('guild_id', interaction.guild.id).order('id', { ascending: true });
                 if (!chars || chars.length === 0) return interaction.reply({ content: 'Chưa có thiết kế nào để sửa!', ephemeral: true });
                 const menu = new StringSelectMenuBuilder().setCustomId('menu_shop_edit').setPlaceholder('Chọn thiết kế cần SỬA...').addOptions(chars.slice(0, 25).map(c => new StringSelectMenuOptionBuilder().setLabel(c.name).setValue(c.id.toString())));
@@ -77,7 +74,6 @@ module.exports = {
             }
 
             if (interaction.customId === 'btn_shop_del') {
-                // Đã thêm .order('id', { ascending: true })
                 const { data: chars } = await supabase.from('characters').select('*').eq('guild_id', interaction.guild.id).order('id', { ascending: true });
                 if (!chars || chars.length === 0) return interaction.reply({ content: 'Chưa có thiết kế nào để xóa!', ephemeral: true });
                 const menu = new StringSelectMenuBuilder().setCustomId('menu_shop_del').setPlaceholder('Chọn thiết kế cần XÓA...').addOptions(chars.slice(0, 25).map(c => new StringSelectMenuOptionBuilder().setLabel(c.name).setValue(c.id.toString())));
@@ -180,7 +176,18 @@ module.exports = {
                 if (ownPet) return interaction.editReply('Nhà Sưu Tầm đã sở hữu nhân vật này rồi, không thể nhận thêm bản sao nữa đâu!');
 
                 await supabase.from('economy').update({ dau: Number(userData.dau) - 50000 }).eq('user_id', userId);
-                await supabase.from('user_pets').insert([{ user_id: userId, guild_id: guildId, pet_id: petId, hunger: 100, happiness: 100 }]);
+                
+                // Cập nhật thêm khởi tạo feed_count = 0 và last_fed = Date.now() cho nhân vật mới
+                await supabase.from('user_pets').insert([{ 
+                    user_id: userId, 
+                    guild_id: guildId, 
+                    pet_id: petId, 
+                    hunger: 100, 
+                    happiness: 100,
+                    feed_count: 0,
+                    last_fed: Date.now()
+                }]);
+                
                 await interaction.editReply('🎀 Đón nhân vật thành công! Gõ lệnh `mbaoduong` để tương tác mỗi ngày nhé!');
                 return;
             }

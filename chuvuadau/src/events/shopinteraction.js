@@ -189,7 +189,18 @@ module.exports = {
                 if (ownPet) return interaction.editReply('Bạn đã rước bé này về nhà rồi, không thể nhận nuôi thêm bản sao nữa đâu!');
 
                 await supabase.from('economy').update({ dau: Number(userData.dau) - 50000 }).eq('user_id', userId);
-                await supabase.from('user_pets').insert([{ user_id: userId, guild_id: guildId, pet_id: petId, hunger: 100, happiness: 100 }]);
+                
+                // Đã chèn thêm khởi tạo feed_count và last_fed cho Char mới mua
+                await supabase.from('user_pets').insert([{ 
+                    user_id: userId, 
+                    guild_id: guildId, 
+                    pet_id: petId, 
+                    hunger: 100, 
+                    happiness: 100,
+                    feed_count: 0,
+                    last_fed: Date.now()
+                }]);
+                
                 await interaction.editReply('🐾 Đón Char thành công! Gõ lệnh `mcare` để tương tác và chăm sóc bé mỗi ngày nhé!');
                 return;
             }

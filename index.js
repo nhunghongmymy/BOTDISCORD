@@ -23,14 +23,9 @@ setTimeout(() => {
 }, 1000);
 
 setTimeout(() => {
-    console.log("Đang kết nối Bảo Kê Quán Nhậu...");
-    require('./baokequannhau/src/index.js');
-}, 8000);
-
-setTimeout(() => {
     console.log("Đang kết nối Chủ Vựa Dâu...");
     require('./chuvuadau/src/index.js');
-}, 15000);
+}, 8000);
 
 // ==========================================
 // MÃ CHỐNG SẬP DÂY CHUYỀN (ANTI-CRASH)
